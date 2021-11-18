@@ -19,13 +19,13 @@ contract Token is ERC20, ERC20Burnable, Pausable {
 
     function mintRequest(address minter) external {
         require(msg.sender == main);
-        _mint(minter, 1);
-        emit Minted(minter, 1);
+        _mint(minter, 1e18);
+        emit Minted(minter, 1e18);
     }
 
     function burnRequest(address minter) external {
         require(msg.sender == main);
-        _burn(minter, 1);
-        emit Burned(minter, 1);
+        _burn(minter, 1e18);
+        emit Burned(minter, 1e18);
     }
 }
