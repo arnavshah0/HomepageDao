@@ -132,7 +132,7 @@ contract backend is Ownable, VRFConsumerBase {
 
     function submitModuleProposal(string calldata id, string memory _data, Indicator _indicator) external onlyMember {
         require(activeprops < 3, "already 3 active proposals");
-        require(uint8(_indicator)<=4, "invalid indicator");
+        require(uint8(_indicator) == 3 || uint8(_indicator) == 4, "invalid indicator");
         require(PresenceCheck[id] == false, 'choose new name');
         PresenceCheck[id] = true;
         uint _end = block.timestamp + (60 * locktime); // changed to minutes for testing
@@ -151,7 +151,7 @@ contract backend is Ownable, VRFConsumerBase {
 
     function submitSettingsProposal(string calldata id, uint _data, Indicator _indicator) external onlyMember {
         require(activeprops < 3, "already 3 active proposals");
-        require(uint8(_indicator)<=4, "invalid indicator");
+        require(uint8(_indicator) == 0 || uint8(_indicator) == 1 || uint8(_indicator) == 2 , "invalid indicator");
         require(PresenceCheck[id] == false, 'choose new name - for quorum, locktime, or threshold: make name unique');
         PresenceCheck[id] = true;
         uint _end = block.timestamp + (60 * locktime); // changed
@@ -250,5 +250,9 @@ contract backend is Ownable, VRFConsumerBase {
 
     function withdrawLink() external onlyOwner {
         LINK.transfer(msg.sender, LINK.balanceOf((address(this))));
+    }
+
+    function viewLiveProposals() external view returns(string[] memory) {
+        return LiveProposals;
     }
 }
