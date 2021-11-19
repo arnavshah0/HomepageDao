@@ -3,6 +3,7 @@ pragma solidity ^0.8.4;
 // SPDX-License-Identifier: MIT
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Token.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 
@@ -17,14 +18,24 @@ contract backend is Ownable, VRFConsumerBase {
     enum Indicator {Threshold, Quorum, Locktime, ModuleAdded, ModuleRemoved}
     enum Status {Passed, Failed, InProgress, Removed}
 
+    IERC20 WMATIC = IERC20(0x86652c1301843B4E06fBfbBDaA6849266fb2b5e7);
+
+    /**
+    WMATIC MAINNET: 0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270
+    WMATIC TESTNET: 0x86652c1301843B4E06fBfbBDaA6849266fb2b5e7
+     */
+
     uint activeprops;
-    uint threshold; // in ETH or MATIC or whatever base currency
+    uint threshold; // in base currency
     uint locktime;
     uint quorum; // 0 -> 100
     uint randomResult;
     uint fee; 
     bytes32 keyHash;
     Token minting;
+    string mediateRandomness; // id of Proposal that is being decided.
+    uint mediateTimestamp; // block.timestamp at decision when randomness is called.
+    bool winnerChosen;
 
     struct Proposal { // name of proposal will be Proposal ID // CID can be passed as a string
         string data;
@@ -90,20 +101,19 @@ contract backend is Ownable, VRFConsumerBase {
 
     function stake() payable external {
         require(Members[msg.sender] == false, 'already staked');
-        require(msg.value >= threshold, 'not exact staking threshold');
-        AmountStaked[msg.sender] = msg.value;
+        require(WMATIC.transferFrom(msg.sender, address(this), threshold));
+        AmountStaked[msg.sender] = threshold;
         Members[msg.sender] = true;
         minting.mintRequest(msg.sender);
         emit StakeSubmitted(msg.sender);
     }
 
-    function withdraw() external onlyMember{
-        require(Members[msg.sender] == true, "not a member");
+    function withdraw() external onlyMember {
         minting.burnRequest(msg.sender);
         Members[msg.sender] = false;
         uint transfervalue = AmountStaked[msg.sender];
         AmountStaked[msg.sender] = 0;
-        payable(msg.sender).transfer(transfervalue);
+        WMATIC.transfer(msg.sender, transfervalue);
     }
 
     function removeIndex(string[] storage arrayname, uint index) internal {
@@ -111,7 +121,14 @@ contract backend is Ownable, VRFConsumerBase {
             arrayname[i] = arrayname[i + 1];
         }
         arrayname.pop();
-    }    
+        changeIndex(arrayname, index);
+    }
+
+    function changeIndex(string[] storage arrayname, uint index) internal {
+        for (uint i = index; i < arrayname.length; i++) {
+            ArrayIndex[arrayname[i]] = ArrayIndex[arrayname[i]] - 1;
+        }
+    }
 
     function submitModuleProposal(string calldata id, string memory _data, Indicator _indicator) external onlyMember {
         require(activeprops < 3, "already 3 active proposals");
@@ -175,9 +192,9 @@ contract backend is Ownable, VRFConsumerBase {
             History.push(id);
             emit ProposalAccepted(id);
             getRandomNumber();
-            uint random = randomResult % ProposalInfo[id].totalvotes;
-            address winner = ProposalInfo[id].voters[random];
-            emit Winner(winner);
+            mediateRandomness = id;
+            mediateTimestamp = block.timestamp;
+            winnerChosen = false;
         } else {
             ProposalInfo[id].status == Status.Failed;
             emit ProposalRejected(id);
@@ -219,6 +236,16 @@ contract backend is Ownable, VRFConsumerBase {
 
     function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
         randomResult = randomness;
+    }
+
+    function decideWinner() external onlyMember {
+        require(ProposalInfo[mediateRandomness].status == Status.Passed || ProposalInfo[mediateRandomness].status == Status.Failed, "Proposal in progress");
+        require(winnerChosen == false, "winner has already been chosen");
+        require(block.timestamp > mediateTimestamp + 30, "wait 30 seconds after deciding proposal");
+        winnerChosen = true;
+        uint random = randomResult % ProposalInfo[mediateRandomness].totalvotes;
+        address winner = ProposalInfo[mediateRandomness].voters[random];
+        emit Winner(winner);
     }
 
     function withdrawLink() external onlyOwner {
