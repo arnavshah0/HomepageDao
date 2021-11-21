@@ -255,4 +255,28 @@ contract backend is Ownable, VRFConsumerBase {
     function viewLiveProposals() external view returns(string[] memory) {
         return LiveProposals;
     }
+
+    function getVoted(address addy, string calldata str) external view returns(bool) {
+        return Voted[addy][str];
+    }
+
+    function getProposalInfo(string calldata str) external view returns(Proposal memory) {
+        return ProposalInfo[str];
+    }
+
+    function getPresenceCheck(string calldata str) external view returns(bool) {
+        return PresenceCheck[str];
+    }
+
+    function getArrayIndex(string calldata str) external view returns(uint) {
+        return ArrayIndex[str];
+    }
+
+    function getMembers(address addy) external view returns(bool) {
+        return Members[addy];
+    }
+
+    function getAmountStaked(address addy) external view returns(uint) {
+        return AmountStaked[addy];
+    }
 }
