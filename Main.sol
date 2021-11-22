@@ -14,6 +14,7 @@ contract backend is Ownable, VRFConsumerBase {
     mapping (string => uint) ArrayIndex;
     mapping (address => bool) Members;
     mapping (address => uint) AmountStaked;
+    mapping (uint => string) UID;
 
     enum Indicator {Threshold, Quorum, Locktime, ModuleAdded, ModuleRemoved}
     enum Status {Passed, Failed, InProgress, Removed}
@@ -25,6 +26,7 @@ contract backend is Ownable, VRFConsumerBase {
     WMATIC TESTNET: 0x86652c1301843B4E06fBfbBDaA6849266fb2b5e7
      */
 
+    uint uniqueID = 0;
     uint activeprops;
     uint threshold; // in base currency
     uint locktime;
@@ -147,6 +149,8 @@ contract backend is Ownable, VRFConsumerBase {
         ProposalInfo[id].totalvotes = 0;
         ArrayIndex[id] = activeprops;
         activeprops++;
+        UID[uniqueID] = id;
+        uniqueID++;
     }
 
     function submitSettingsProposal(string calldata id, uint _data, Indicator _indicator) external onlyMember {
@@ -166,6 +170,8 @@ contract backend is Ownable, VRFConsumerBase {
         ProposalInfo[id].totalvotes = 0;
         ArrayIndex[id] = activeprops;
         activeprops++;
+        UID[uniqueID] = id;
+        uniqueID++;
     }
 
     function vote(string calldata id, bool value) external onlyMember {
@@ -252,8 +258,16 @@ contract backend is Ownable, VRFConsumerBase {
         LINK.transfer(msg.sender, LINK.balanceOf((address(this))));
     }
 
-    function viewLiveProposals() external view returns(string[] memory) {
+    function getLiveProposals() external view returns(string[] memory) {
         return LiveProposals;
+    }
+
+    function getProposalsHistory() external view returns(string[] memory) {
+        return History;
+    }
+
+    function getActiveProposals() external view returns(string[] memory) {
+        return ActiveProposals;
     }
 
     function getVoted(address addy, string calldata str) external view returns(bool) {
@@ -278,5 +292,9 @@ contract backend is Ownable, VRFConsumerBase {
 
     function getAmountStaked(address addy) external view returns(uint) {
         return AmountStaked[addy];
+    }
+
+    function UIDtoProposalName(uint num) external view returns (string memory) {
+        return UID[num];
     }
 }
