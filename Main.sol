@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 // SPDX-License-Identifier: MIT
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./Token.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 
@@ -18,8 +18,8 @@ contract backend is Ownable, VRFConsumerBase {
 
     enum Indicator {Threshold, Quorum, Locktime, ModuleAdded, ModuleRemoved}
     enum Status {Passed, Failed, InProgress, Removed}
-
-    IERC20 WMATIC = IERC20(0x86652c1301843B4E06fBfbBDaA6849266fb2b5e7);
+    
+    ERC20 public WMATIC;
 
     /**
     WMATIC MAINNET: 0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270
@@ -73,6 +73,7 @@ contract backend is Ownable, VRFConsumerBase {
         quorum = _quorum / 100;
         keyHash = 0x6e75b569a01ef56d18cab6a8e71e6600d6ce853834d4a5748b720d06f878b3a4;
         fee = 0.0001 * 10 ** 18; // 0.0001 LINK
+        WMATIC = ERC20(0x86652c1301843B4E06fBfbBDaA6849266fb2b5e7);
     }
         /**
     MUMBAI TESTNET
@@ -100,10 +101,10 @@ contract backend is Ownable, VRFConsumerBase {
     function mintingContract(Token _minting) external onlyOwner {
         minting = _minting;
     }
-
-    function stake() payable external {
+    
+    function stake() external {
         require(Members[msg.sender] == false, 'already staked');
-        require(WMATIC.transferFrom(msg.sender, address(this), threshold));
+        require(WMATIC.transferFrom(msg.sender, address(this), threshold), "transfer required"); // approval must be done first
         AmountStaked[msg.sender] = threshold;
         Members[msg.sender] = true;
         minting.mintRequest(msg.sender);
@@ -296,5 +297,5 @@ contract backend is Ownable, VRFConsumerBase {
 
     function UIDtoProposalName(uint num) external view returns (string memory) {
         return UID[num];
-    }
+    }   
 }
