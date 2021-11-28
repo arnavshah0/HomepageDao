@@ -194,7 +194,7 @@ contract backend is Ownable, VRFConsumerBase {
         uint totalvotes = ProposalInfo[id].totalvotes * 100;
         uint overcome = (totalvotes / 50) * (ProposalInfo[id].quorumsnapshot / 2);
         if (forvotes > overcome) {
-            ProposalInfo[id].status == Status.Passed;
+            ProposalInfo[id].status = Status.Passed;
             settleProposal(id);
             History.push(id);
             emit ProposalAccepted(id);
@@ -203,7 +203,7 @@ contract backend is Ownable, VRFConsumerBase {
             mediateTimestamp = block.timestamp;
             winnerChosen = false;
         } else {
-            ProposalInfo[id].status == Status.Failed;
+            ProposalInfo[id].status = Status.Failed;
             emit ProposalRejected(id);
             History.push(id);
         }
